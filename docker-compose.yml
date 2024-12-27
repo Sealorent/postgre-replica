@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  postgres_primary:
+    image: chumaky/postgres_mysql_fdw:16.3_fdw2.9.1
+    container_name: postgres_primary
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: mydatabase
+    volumes:
+      - postgres_primary_data:/var/lib/postgresql/data
+      - ./primary/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./primary/pg_hba.conf:/etc/postgresql/pg_hba.conf
+      - ./archive:/archive
+    ports:
+      - "5432:5432"
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres_replica:
+    image: chumaky/postgres_mysql_fdw:16.3_fdw2.9.1
+    container_name: postgres_replica
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: mydatabase
+    volumes:
+      - postgres_replica_data:/var/lib/postgresql/data
+      - ./replica/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./replica/pg_hba.conf:/etc/postgresql/pg_hba.conf
+    ports:
+      - "5433:5432"
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    depends_on:
+      postgres_primary:
+        condition: service_healthy
+
+volumes:
+  postgres_primary_data:
+  postgres_replica_data:
